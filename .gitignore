@@ -1,0 +1,19 @@
+# Ignore build output and user-specific files
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+# Ignore Rider project files
+.idea/
+# Ignore Mac system files
+.DS_Store
+# Ignore logs
+*.log
+# Ignore secrets
+secrets.json
+# Ignore local settings
+appsettings.Development.json
+appsettings.Local.json
