@@ -24,16 +24,18 @@ namespace K8Intel.Services
             _configuration = configuration;
         }
 
-        public async Task<string> LoginAsync(UserLoginDto loginDto)
+        public async Task<(User? user, string? token)> LoginAsync(UserLoginDto loginDto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
+        if (user == null || !VerifyPassword(loginDto.Password, user.PasswordHash))
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
-            if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !VerifyPassword(loginDto.Password, user.PasswordHash))
-            {
-                throw new UnauthorizedAccessException("Invalid credentials.");
-            }
-
-            return GenerateJwtToken(user);
+            // Instead of throwing, we return nulls so the controller can handle it
+            return (null, null);
         }
+
+        var token = GenerateJwtToken(user);
+        return (user, token);
+    }
 
         public async Task<User> RegisterAsync(UserRegistrationDto registrationDto)
         {

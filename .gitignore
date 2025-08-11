@@ -17,3 +17,6 @@ secrets.json
 # Ignore local settings
 appsettings.Development.json
 appsettings.Local.json
+logs/k8intel_log20250811.txt
+logs/k8intel_log20250811.txt
+logs/k8intel_log20250811.txt

@@ -7,6 +7,6 @@ namespace K8Intel.Interfaces
     public interface IAuthService
     {
         Task<User> RegisterAsync(UserRegistrationDto registrationDto);
-        Task<string> LoginAsync(UserLoginDto loginDto);
+        Task<(User? user, string? token)> LoginAsync(UserLoginDto loginDto);
     }
 }

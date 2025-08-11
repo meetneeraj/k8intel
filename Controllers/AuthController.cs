@@ -1,8 +1,14 @@
 using K8Intel.Dtos;
 using K8Intel.Interfaces;
-using Microsoft.AspNetCore.Mvc;
-using System;
+using K8Intel.Models;
+using Microsoft.AspNetCore.Authentication; // --->>> ADD THIS
+using Microsoft.AspNetCore.Authentication.Cookies; // --->>> ADD THIS
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic; // --->>> ADD THIS
+using System.Security.Claims; // --->>> ADD THIS
+using System;
+using System.Threading.Tasks;
 
 namespace K8Intel.Controllers
 {
@@ -39,12 +45,35 @@ namespace K8Intel.Controllers
         {
             try
             {
-                var token = await _authService.LoginAsync(loginDto);
-                return Ok(new LoginResponseDto(token));
+                // We change the IAuthService to return a full User object on successful login
+                var (user, jwtToken) = await _authService.LoginAsync(loginDto);
+                if (user == null)
+                {
+                    return Unauthorized("Invalid credentials.");
+                }
+
+                // --- START: COOKIE SIGN-IN LOGIC ---
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role)
+                };
+
+                var claimsIdentity = new ClaimsIdentity(
+                    claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(claimsIdentity));
+                // --- END: COOKIE SIGN-IN LOGIC ---
+                
+                // Return the JWT token in the body as before
+                return Ok(new LoginResponseDto(jwtToken));
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(ex.Message);
+                return Unauthorized(new { message = ex.Message });
             }
         }
     }

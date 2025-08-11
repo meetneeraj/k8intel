@@ -11,6 +11,10 @@ using K8Intel.Security;
 using K8Intel.Middleware;
 using Serilog;
 using K8Intel.Data.Seeding;
+using Hangfire;
+using Hangfire.PostgreSql;
+using K8Intel.Jobs;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 const string MyAllowSpecificOrigins = "_myAllowSpecificOrigins"; 
@@ -25,8 +29,10 @@ builder.Host.UseSerilog((context, configuration) =>
 // Register services and interfaces
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IClusterService, ClusterService>(); 
-builder.Services.AddScoped<IAlertService, AlertService>();     
-builder.Services.AddScoped<IMetricService, MetricService>();   
+builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddScoped<IMetricService, MetricService>();
+builder.Services.AddScoped<IDataRetentionJob, DataRetentionJob>();
+   
 builder.Services.AddHttpsRedirection(options =>
         {
             options.HttpsPort = 8082; 
@@ -44,14 +50,33 @@ builder.Services.AddCors(options =>
                           policy.WithOrigins("http://localhost:5001")
                                 .AllowAnyHeader()
                                 .AllowAnyMethod()
-                                .WithExposedHeaders("X-Pagination"); 
+                                .WithExposedHeaders("X-Pagination");
                       });
 });
+
+// 1. Add Hangfire services.
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))));
+
+// 2. Add the processing server as a hosted service.
+builder.Services.AddHangfireServer();
+
 // 2. Configure JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddCookie(options =>
+{
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = 401;
+        return Task.CompletedTask;
+    };
 })
 .AddJwtBearer(options =>
 {
@@ -103,10 +128,13 @@ builder.Services.AddSwaggerGen(c => {
 
 var app = builder.Build();
 
+// This should run only if needed for initial setup, but it's okay here.
 await DefaultUserSeeder.SeedDefaultAdminUserAsync(app);
 
+// Global Exception handler should be first.
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
-// 4. Configure the HTTP request pipeline.
+
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -115,10 +143,40 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+
+// CORS must be called before Authentication/Authorization.
+app.UseCors(MyAllowSpecificOrigins);
+
+// Authentication must come before Authorization.
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+// Add Serilog request logging after auth to log the user.
 app.UseSerilogRequestLogging();
 
+
+// --->>> MAP YOUR ENDPOINTS LAST <<<---
+
+// 1. Map your API controllers.
+app.MapControllers();
+
+// 2. Map the Hangfire Dashboard.
+// This requires its own specific policy to be correctly secured.
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthorizationFilter() }
+});
+
+RecurringJob.AddOrUpdate<IDataRetentionJob>(
+    "daily-data-retention-job",   // A unique ID for the job
+    job => job.PurgeOldDataAsync(),
+    "0 1 * * *");                 // CRON expression for daily at 1 AM UTC
+
+
 app.Run();
+
+// app.MapHangfireDashboard("/hangfire", new DashboardOptions
+// {
+//     Authorization = new[] { new HangfireAuthorizationFilter() }
+// })
+// .RequireAuthorization(policy => policy.RequireRole("Admin")); // Double-enforce security
