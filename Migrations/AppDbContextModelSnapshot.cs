@@ -52,7 +52,8 @@ namespace K8intel.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClusterId");
+                    b.HasIndex("ClusterId", "Timestamp", "Severity", "IsResolved")
+                        .HasDatabaseName("IX_Alerts_ClusterId_Timestamp_Filtered");
 
                     b.ToTable("Alerts");
                 });
@@ -65,6 +66,10 @@ namespace K8intel.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AgentApiKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("ApiEndpoint")
                         .IsRequired()
                         .HasColumnType("text");
@@ -74,6 +79,12 @@ namespace K8intel.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_Clusters_Name_Trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Name"), "gist");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Name"), new[] { "gist_trgm_ops" });
 
                     b.ToTable("Clusters");
                 });
@@ -101,7 +112,8 @@ namespace K8intel.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClusterId");
+                    b.HasIndex("ClusterId", "MetricType", "Timestamp")
+                        .HasDatabaseName("IX_ClusterMetrics_ClusterId_Type_Timestamp");
 
                     b.ToTable("ClusterMetrics");
                 });
@@ -127,6 +139,9 @@ namespace K8intel.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });

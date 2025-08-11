@@ -81,7 +81,7 @@ namespace K8Intel.Services
                     new Claim(ClaimTypes.Name, user.Username ?? throw new InvalidOperationException("User.Username cannot be null")),
                     new Claim(ClaimTypes.Role, user.Role ?? string.Empty)
                 }),
-                Expires = DateTime.UtcNow.AddHours(1),
+                Expires = DateTime.UtcNow.AddHours(5),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"],
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

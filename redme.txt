@@ -1,0 +1,60 @@
+The K8Intel Professional Roadmap
+This roadmap is designed to build a scalable, enterprise-grade platform. Each phase represents a significant leap in capability.
+Phase 1: Professional Foundation - From Prototype to Platform
+Goal: Solidify the current application into a stable, resilient, and scalable platform that can be reliably used and built upon. This is the most critical phase.
+🔧 Backend API:
+Pagination & Sorting: Implement universal pagination (?page=1&pageSize=20) and sorting (?sortBy=cpu&order=desc) on all endpoints that return lists (/clusters, /alerts, /metrics). This is essential for performance and scalability.
+Robust Filtering: Add server-side filtering to API endpoints. For example: /api/alerts?severity=critical&resolved=false.
+Graceful Error Handling & Logging: Implement a global exception handling middleware to return standardized JSON error responses. Integrate a powerful logging framework like Serilog to log to the console and structured files, providing clear, queryable logs.
+RBAC Enforcement: Properly implement the [Authorize(Roles = "...")] attribute across all endpoints to ensure the security model is strictly enforced.
+Database Indexing: Analyze API query patterns and add database indexes to foreign keys (ClusterId) and frequently filtered columns (Timestamp, Severity) to ensure high-speed queries as data grows.
+Background Job for Data Retention: Integrate Hangfire to create a simple, recurring background job that purges metrics and resolved alerts older than a configured period (e.g., 30 days) to prevent database bloat.
+🤖 Agent:
+Resilience with Retry Logic: Implement a resilient HTTP client loop. If an API call fails (e.g., 500 error, network timeout), the agent should not crash. It must retry with an exponential backoff strategy (e.g., wait 2s, then 4s, then 8s).
+Expanded Metric Collection: Add collectors for more fundamental node metrics using psutil:
+Disk I/O (read/write bytes)
+Network I/O (bytes sent/received)
+Configuration via ConfigMap: Refactor the Python agent to read all configuration from environment variables, making it fully configurable via a Kubernetes ConfigMap as intended.
+Dockerfile & Containerization: Create a multi-stage Dockerfile for the agent that is optimized for size and security.
+Phase 2: Deepened Observability & Context
+Goal: Move beyond basic node stats to understanding the applications and context within the Kubernetes cluster.
+🔧 Backend API:
+New Models for K8s Objects: Introduce new database models for Node, Pod, and Container.
+Drill-Down Endpoints: Create new endpoints like /api/clusters/{id}/nodes, /api/nodes/{id}/pods, and /api/pods/{id}/metrics.
+Timeseries Aggregation API: Build an endpoint for the UI that can return aggregated data. For example: GET /api/metrics/cluster/{id}/summary?timespan=24h&interval=1h&agg=avg to get the average CPU usage per hour for the last 24 hours.
+Cluster Health Status: Implement logic that determines a cluster's health (Healthy, Warning, Offline) based on when the last metric was received from its agent. Expose this in the /api/clusters endpoint.
+🤖 Agent:
+Kubernetes-Native Data Collection: Use the official Python Kubernetes Client library to connect to the in-cluster API server.
+Cluster & Workload Fingerprinting: On startup and periodically, the agent will:
+Discover all Nodes and report their status, K8s version, OS, etc.
+Discover all Pods in key namespaces and report their status (Running, Pending, CrashLoopBackOff), container images, and resource requests/limits.
+Event Collection: Watch the Kubernetes Events API for significant events (e.g., FailedScheduling, OOMKilled, Backoff) and forward them to the /api/alerts endpoint as "Info" or "Warning" level alerts.
+Phase 3: AI-Powered Insights & Cost Optimization
+Goal: Transition from a data collection tool to an intelligent advisor. This is where K8Intel becomes a "must-have" product.
+🔧 Backend API:
+Alert Correlation Engine: Create a background service that analyzes incoming alerts. If 20 pods in the same Deployment all report high CPU at the same time, it should correlate these into a single "Incident" event: "High CPU usage across deployment-xyz."
+Recommendation Engine (Rule-Based): Implement the first set of recommendations.
+Cost Optimization: "Pod X has requested 1 core of CPU but has not used more than 0.1 cores in the last 7 days. Consider reducing its CPU request to save costs."
+Stability: "Alert High CPU for Deployment Y has fired 15 times in the last hour. Consider increasing the replicas or investigating application performance."
+Data Models for Insights: Add Recommendation and Incident tables to the database to store these generated insights.
+🤖 Agent (Optional AI on the Edge):
+Edge Anomaly Detection: Implement basic anomaly detection directly in the agent. Instead of a fixed threshold (CPU > 90%), the agent can learn a pod's baseline. It would then alert if "CPU usage is 3 standard deviations above its weekly average for this time of day." This reduces noisy, static alerts.
+Phase 4 & 5: Enterprise Readiness, Hardening & Integrations
+Goal: Prepare the product for paying customers and mature DevOps practices.
+🔧 Backend API:
+Multi-Tenancy: The most significant architectural change. Isolate all data by a TenantId.
+Authentication: Implement OAuth2/SSO for user login.
+Integrations (Webhooks): Add the ability to send alerts to external systems like Slack, MS Teams, and PagerDuty.
+Full CI/CD Pipeline: Automate the build, testing (xUnit), and deployment of the backend API and database migrations to Kubernetes.
+Audit Logging: Log every sensitive action (login, cluster creation, user deletion) to a secure audit trail.
+🤖 Agent:
+Helm Chart Deployment: The agent's YAML manifests will be packaged into a professional Helm chart, making installation and configuration on customer clusters a single command (helm install ...).
+Pluggable Collector Architecture: Refactor the agent so new data sources (e.g., Prometheus endpoint scraping, eBPF data) can be added as plugins without changing the core agent logic.
+Automated Security Scanning: Integrate tools like Trivy or Snyk into the CI/CD pipeline to automatically scan the agent's Docker image for vulnerabilities before any release.
+Let's Start Now: Phase 1 Action Plan
+This is an ambitious roadmap. The best way to tackle it is to start with the most foundational item from Phase 1.
+Our First Target: Implement Pagination on the /api/clusters endpoint.
+This is a perfect starting point because:
+It's a universal requirement for any professional API.
+It forces us to think about how to structure our data responses.
+It's a self-contained feature that can be implemented and tested fully on the backend.

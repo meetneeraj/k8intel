@@ -10,6 +10,7 @@ namespace K8Intel.Models
         public string? Name { get; set; }
         [Required]
         public string ?ApiEndpoint { get; set; }
+        public string AgentApiKey { get; set; } = string.Empty;
         public ICollection<Alert> Alerts { get; set; } = new List<Alert>();
         public ICollection<ClusterMetric> Metrics { get; set; } = new List<ClusterMetric>();
     }

@@ -10,6 +10,6 @@ namespace K8Intel.Models
         [Required]
         public string ?PasswordHash { get; set; }
         [Required]
-        public string? Role { get; set; } // "Admin", "Operator", "Viewer"
+        public string? Role { get; set; } = "Admin";// "Admin", "Operator", "Viewer"
     }
 }

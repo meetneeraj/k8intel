@@ -2,7 +2,7 @@ using K8Intel.Dtos;
 using K8Intel.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace K8Intel.Controllers
 {
@@ -18,6 +18,7 @@ namespace K8Intel.Controllers
         }
 
         [HttpPost("register")]
+        [Authorize(Roles = "Admin")] 
         public async Task<IActionResult> Register(UserRegistrationDto registrationDto)
         {
             try
@@ -33,6 +34,7 @@ namespace K8Intel.Controllers
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login(UserLoginDto loginDto)
         {
             try
