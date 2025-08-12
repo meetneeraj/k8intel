@@ -74,6 +74,9 @@ namespace K8intel.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("LastAgentContactAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -116,6 +119,82 @@ namespace K8intel.Migrations
                         .HasDatabaseName("IX_ClusterMetrics_ClusterId_Type_Timestamp");
 
                     b.ToTable("ClusterMetrics");
+                });
+
+            modelBuilder.Entity("K8Intel.Models.Node", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClusterId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("KubeletVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OsImage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClusterId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Nodes");
+                });
+
+            modelBuilder.Entity("K8Intel.Models.Pod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("CpuRequest")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Image")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<double>("MemoryRequest")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Namespace")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("NodeId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NodeId", "Name", "Namespace")
+                        .IsUnique();
+
+                    b.ToTable("Pods");
                 });
 
             modelBuilder.Entity("K8Intel.Models.User", b =>
@@ -168,11 +247,40 @@ namespace K8intel.Migrations
                     b.Navigation("Cluster");
                 });
 
+            modelBuilder.Entity("K8Intel.Models.Node", b =>
+                {
+                    b.HasOne("K8Intel.Models.Cluster", "Cluster")
+                        .WithMany("Nodes")
+                        .HasForeignKey("ClusterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cluster");
+                });
+
+            modelBuilder.Entity("K8Intel.Models.Pod", b =>
+                {
+                    b.HasOne("K8Intel.Models.Node", "Node")
+                        .WithMany("Pods")
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Node");
+                });
+
             modelBuilder.Entity("K8Intel.Models.Cluster", b =>
                 {
                     b.Navigation("Alerts");
 
                     b.Navigation("Metrics");
+
+                    b.Navigation("Nodes");
+                });
+
+            modelBuilder.Entity("K8Intel.Models.Node", b =>
+                {
+                    b.Navigation("Pods");
                 });
 #pragma warning restore 612, 618
         }

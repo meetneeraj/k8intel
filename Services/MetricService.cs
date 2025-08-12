@@ -25,6 +25,12 @@ namespace K8Intel.Services
 
         public async Task<MetricDto> CreateMetricAsync(CreateMetricDto createDto)
         {
+            var cluster = await _context.Clusters.FindAsync(createDto.ClusterId);
+            if (cluster != null)
+            {
+                cluster.LastAgentContactAt = DateTime.UtcNow;
+            }
+
             var metric = _mapper.Map<ClusterMetric>(createDto);
             metric.Timestamp = DateTime.UtcNow;
 

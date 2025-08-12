@@ -32,6 +32,7 @@ builder.Services.AddScoped<IClusterService, ClusterService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IMetricService, MetricService>();
 builder.Services.AddScoped<IDataRetentionJob, DataRetentionJob>();
+builder.Services.AddScoped<IKubernetesService, KubernetesService>();
    
 builder.Services.AddHttpsRedirection(options =>
         {

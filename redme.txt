@@ -9,6 +9,7 @@ Graceful Error Handling & Logging: Implement a global exception handling middlew
 RBAC Enforcement: Properly implement the [Authorize(Roles = "...")] attribute across all endpoints to ensure the security model is strictly enforced.
 Database Indexing: Analyze API query patterns and add database indexes to foreign keys (ClusterId) and frequently filtered columns (Timestamp, Severity) to ensure high-speed queries as data grows.
 Background Job for Data Retention: Integrate Hangfire to create a simple, recurring background job that purges metrics and resolved alerts older than a configured period (e.g., 30 days) to prevent database bloat.
+
 🤖 Agent:
 Resilience with Retry Logic: Implement a resilient HTTP client loop. If an API call fails (e.g., 500 error, network timeout), the agent should not crash. It must retry with an exponential backoff strategy (e.g., wait 2s, then 4s, then 8s).
 Expanded Metric Collection: Add collectors for more fundamental node metrics using psutil:
@@ -16,6 +17,7 @@ Disk I/O (read/write bytes)
 Network I/O (bytes sent/received)
 Configuration via ConfigMap: Refactor the Python agent to read all configuration from environment variables, making it fully configurable via a Kubernetes ConfigMap as intended.
 Dockerfile & Containerization: Create a multi-stage Dockerfile for the agent that is optimized for size and security.
+
 Phase 2: Deepened Observability & Context
 Goal: Move beyond basic node stats to understanding the applications and context within the Kubernetes cluster.
 🔧 Backend API:

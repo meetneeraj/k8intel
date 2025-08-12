@@ -52,7 +52,7 @@ namespace K8Intel.Services
         }
         public async Task<PagedResult<ClusterDto>> GetAllClustersAsync(
         int pageNumber, int pageSize, string? name,
-        string? sortBy, string? sortOrder) 
+        string? sortBy, string? sortOrder)
         {
             var query = _context.Clusters.AsNoTracking();
 
@@ -77,8 +77,16 @@ namespace K8Intel.Services
                     : query.OrderBy(c => c.Name)
             };
 
-            var finalQuery = orderedQuery.ProjectTo<ClusterDto>(_configurationProvider);
-            return await finalQuery.ToPagedResultAsync(pageNumber, pageSize);
+            var dtoQuery = orderedQuery.Select(c => new ClusterDto(
+                    c.Id,
+                    c.Name,
+                    c.ApiEndpoint,
+                    !c.LastAgentContactAt.HasValue
+                        ? "Unknown"
+                        : (c.LastAgentContactAt.Value < DateTime.UtcNow.AddMinutes(-10) ? "Offline" : "Healthy")
+                ));
+
+            return await dtoQuery.ToPagedResultAsync(pageNumber, pageSize);
         }
     }
 }
