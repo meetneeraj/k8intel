@@ -15,6 +15,8 @@ namespace K8Intel.Data
         
         public DbSet<Node> Nodes { get; set; }
         public DbSet<Pod> Pods { get; set; }
+        public DbSet<Incident> Incidents { get; set; }
+        public DbSet<Recommendation> Recommendations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -54,7 +56,7 @@ namespace K8Intel.Data
                 .HasMany(c => c.Metrics)
                 .WithOne(m => m.Cluster)
                 .HasForeignKey(m => m.ClusterId);
-                
+
             modelBuilder.Entity<Node>()
             .HasIndex(n => new { n.ClusterId, n.Name })
             .IsUnique();
@@ -72,6 +74,12 @@ namespace K8Intel.Data
                 .HasMany(n => n.Pods)
                 .WithOne(p => p.Node)
                 .HasForeignKey(p => p.NodeId);
-            }
+
+            modelBuilder.Entity<Incident>()
+            .HasIndex(i => new { i.ClusterId, i.Fingerprint, i.Status });
+            
+            modelBuilder.Entity<Recommendation>()
+                .HasIndex(r => new { r.ClusterId, r.Type });
+        }
     }
 }

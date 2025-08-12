@@ -31,6 +31,7 @@ Cluster & Workload Fingerprinting: On startup and periodically, the agent will:
 Discover all Nodes and report their status, K8s version, OS, etc.
 Discover all Pods in key namespaces and report their status (Running, Pending, CrashLoopBackOff), container images, and resource requests/limits.
 Event Collection: Watch the Kubernetes Events API for significant events (e.g., FailedScheduling, OOMKilled, Backoff) and forward them to the /api/alerts endpoint as "Info" or "Warning" level alerts.
+
 Phase 3: AI-Powered Insights & Cost Optimization
 Goal: Transition from a data collection tool to an intelligent advisor. This is where K8Intel becomes a "must-have" product.
 🔧 Backend API:

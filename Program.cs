@@ -33,6 +33,7 @@ builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IMetricService, MetricService>();
 builder.Services.AddScoped<IDataRetentionJob, DataRetentionJob>();
 builder.Services.AddScoped<IKubernetesService, KubernetesService>();
+builder.Services.AddScoped<IInsightsGeneratorJob, InsightsGeneratorJob>();
    
 builder.Services.AddHttpsRedirection(options =>
         {
@@ -171,8 +172,12 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
 RecurringJob.AddOrUpdate<IDataRetentionJob>(
     "daily-data-retention-job",   // A unique ID for the job
     job => job.PurgeOldDataAsync(),
-    "0 1 * * *");                 // CRON expression for daily at 1 AM UTC
+    "0 1 * * *");                 
 
+RecurringJob.AddOrUpdate<IInsightsGeneratorJob>(
+    "stability-recommendation-job",
+    job => job.GenerateStabilityRecommendationsAsync(),
+    "*/15 * * * *"); 
 
 app.Run();
 

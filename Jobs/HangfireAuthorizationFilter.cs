@@ -1,4 +1,3 @@
-// File: Jobs/HangfireAuthorizationFilter.cs
 using Hangfire.Dashboard;
 using System.Security.Claims;
 

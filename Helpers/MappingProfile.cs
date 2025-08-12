@@ -33,13 +33,19 @@ namespace K8Intel.Helpers
                 .ForMember(dest => dest.NodeName, opt => opt.MapFrom(src => src.Node.Name));
 
             CreateMap<NodeDto, Node>()
-                .ForMember(dest => dest.Id, opt => opt.Ignore()) // Don't map Id, let DB generate it
-                .ForMember(dest => dest.Cluster, opt => opt.Ignore()); // Don't map navigation property
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Cluster, opt => opt.Ignore())
+                .ForMember(dest => dest.ClusterId, opt => opt.Ignore());
+                
 
             CreateMap<PodDto, Pod>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.Node, opt => opt.Ignore())
                 .ForMember(dest => dest.NodeId, opt => opt.Ignore());
+
+            CreateMap<Incident, IncidentDto>();
+            CreateMap<Recommendation, RecommendationDto>()
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
         }
     }
 }
