@@ -69,13 +69,22 @@ builder.Services.AddHangfireServer();
 // 2. Configure JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    // For a stateless API, the default should always be the token scheme.
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    
+    // This correctly tells the app to challenge with the Bearer scheme,
+    // which results in a 401 Unauthorized if the token is missing or invalid.
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    
+    // (Optional) This tells other parts of the system (like Hangfire Dashboard)
+    // what scheme to use for signing in.
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 })
-.AddCookie(options =>
+.AddCookie(options => // Keep the cookie configuration for Hangfire or a future MVC UI
 {
     options.Events.OnRedirectToLogin = context =>
     {
+        // For an API, never redirect. Just return 401.
         context.Response.StatusCode = 401;
         return Task.CompletedTask;
     };

@@ -2,12 +2,13 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using K8Intel.Data;
 using K8Intel.Dtos;
+using K8Intel.Dtos.Common;
+using K8Intel.Extensions;
 using K8Intel.Interfaces;
 using K8Intel.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
-using K8Intel.Dtos.Common;
-using K8Intel.Extensions;
+using System.Threading.Tasks;
 
 namespace K8Intel.Services
 {
@@ -21,7 +22,7 @@ namespace K8Intel.Services
         {
             _context = context;
             _mapper = mapper;
-            _configurationProvider = mapper.ConfigurationProvider; // Get the provider
+            _configurationProvider = mapper.ConfigurationProvider;
         }
 
         public async Task<ClusterDto> CreateClusterAsync(CreateClusterDto createDto)
@@ -29,64 +30,34 @@ namespace K8Intel.Services
             var cluster = _mapper.Map<Cluster>(createDto);
 
             var keyBytes = RandomNumberGenerator.GetBytes(32);
-            cluster.AgentApiKey = Convert.ToBase64String(keyBytes)
-                                     .TrimEnd('=')
-                                     .Replace('+', '-')
-                                     .Replace('/', '_');
+            cluster.AgentApiKey = System.Convert.ToBase64String(keyBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
             _context.Clusters.Add(cluster);
             await _context.SaveChangesAsync();
-            return _mapper.Map<ClusterDto>(cluster);
+            return _mapper.Map<ClusterDto>(cluster); // This will now work
         }
 
-        public async Task<IEnumerable<ClusterDto>> GetAllClustersAsync()
+        public async Task<PagedResult<ClusterDto>> GetAllClustersAsync(int pageNumber, int pageSize, string? name, string? sortBy, string? sortOrder)
         {
-            var clusters = await _context.Clusters.ToListAsync();
-            return _mapper.Map<IEnumerable<ClusterDto>>(clusters);
+            var query = _context.Clusters.AsNoTracking();
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(c => EF.Functions.ILike(c.Name, $"%{name}%"));
+            }
+            var orderedQuery = sortBy?.ToLower() switch {
+                "id" => (sortOrder?.ToLower() == "asc") ? query.OrderBy(c => c.Id) : query.OrderByDescending(c => c.Id),
+                _ => (sortOrder?.ToLower() == "desc") ? query.OrderByDescending(c => c.Name) : query.OrderBy(c => c.Name)
+            };
+            return await orderedQuery.ProjectTo<ClusterDto>(_configurationProvider).ToPagedResultAsync(pageNumber, pageSize);
         }
 
         public async Task<ClusterDto?> GetClusterByIdAsync(int id)
         {
-            var cluster = await _context.Clusters.FindAsync(id);
-            return cluster == null ? null : _mapper.Map<ClusterDto>(cluster);
-        }
-        public async Task<PagedResult<ClusterDto>> GetAllClustersAsync(
-        int pageNumber, int pageSize, string? name,
-        string? sortBy, string? sortOrder)
-        {
-            var query = _context.Clusters.AsNoTracking();
-
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                // Use EF.Functions.ILike to generate a case-insensitive LIKE query.
-                // The '%' wildcards are crucial for the "CONTAINS" behavior.
-                // This query form is optimized to use the pg_trgm index.
-                query = query.Where(c => EF.Functions.ILike(c.Name, $"%{name}%"));
-            }
-
-            // --->>> ADD sorting logic <<<---
-            var orderedQuery = sortBy?.ToLower() switch
-            {
-                "id" => (sortOrder?.ToLower() == "asc")
-                    ? query.OrderBy(c => c.Id)
-                    : query.OrderByDescending(c => c.Id),
-
-                // Default to sorting by name
-                _ => (sortOrder?.ToLower() == "desc")
-                    ? query.OrderByDescending(c => c.Name)
-                    : query.OrderBy(c => c.Name)
-            };
-
-            var dtoQuery = orderedQuery.Select(c => new ClusterDto(
-                    c.Id,
-                    c.Name,
-                    c.ApiEndpoint,
-                    !c.LastAgentContactAt.HasValue
-                        ? "Unknown"
-                        : (c.LastAgentContactAt.Value < DateTime.UtcNow.AddMinutes(-10) ? "Offline" : "Healthy")
-                ));
-
-            return await dtoQuery.ToPagedResultAsync(pageNumber, pageSize);
+            return await _context.Clusters
+                .AsNoTracking()
+                .Where(c => c.Id == id)
+                .ProjectTo<ClusterDto>(_configurationProvider)
+                .FirstOrDefaultAsync();
         }
     }
 }

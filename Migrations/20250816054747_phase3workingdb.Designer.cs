@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace K8intel.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250812083311_AddK8sObjectsAndHealth")]
-    partial class AddK8sObjectsAndHealth
+    [Migration("20250816054747_phase3workingdb")]
+    partial class phase3workingdb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -124,6 +124,45 @@ namespace K8intel.Migrations
                     b.ToTable("ClusterMetrics");
                 });
 
+            modelBuilder.Entity("K8Intel.Models.Incident", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlertCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ClusterId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClusterId", "Fingerprint", "Status");
+
+                    b.ToTable("Incidents");
+                });
+
             modelBuilder.Entity("K8Intel.Models.Node", b =>
                 {
                     b.Property<int>("Id")
@@ -200,6 +239,42 @@ namespace K8intel.Migrations
                     b.ToTable("Pods");
                 });
 
+            modelBuilder.Entity("K8Intel.Models.Recommendation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClusterId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TargetResource")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClusterId", "Type");
+
+                    b.ToTable("Recommendations");
+                });
+
             modelBuilder.Entity("K8Intel.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -250,6 +325,17 @@ namespace K8intel.Migrations
                     b.Navigation("Cluster");
                 });
 
+            modelBuilder.Entity("K8Intel.Models.Incident", b =>
+                {
+                    b.HasOne("K8Intel.Models.Cluster", "Cluster")
+                        .WithMany()
+                        .HasForeignKey("ClusterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cluster");
+                });
+
             modelBuilder.Entity("K8Intel.Models.Node", b =>
                 {
                     b.HasOne("K8Intel.Models.Cluster", "Cluster")
@@ -270,6 +356,17 @@ namespace K8intel.Migrations
                         .IsRequired();
 
                     b.Navigation("Node");
+                });
+
+            modelBuilder.Entity("K8Intel.Models.Recommendation", b =>
+                {
+                    b.HasOne("K8Intel.Models.Cluster", "Cluster")
+                        .WithMany()
+                        .HasForeignKey("ClusterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cluster");
                 });
 
             modelBuilder.Entity("K8Intel.Models.Cluster", b =>
