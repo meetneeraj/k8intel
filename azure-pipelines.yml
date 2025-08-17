@@ -12,7 +12,7 @@ variables:
   azureServiceConnection: 'Azure-Subscription' 
   # IMPORTANT: Change this to your Azure Container Registry name
   azureContainerRegistry: 'k8intelregistrynmac.azurecr.io'
-  dockerRegistryServiceConnection: 'k8intelregistrynmac' 
+  dockerRegistryServiceConnection: 'k8intelregistrynmac.azurecr.io' 
   imageRepository: 'k8intel-api' 
   dockerfilePath: 'K8intel/Dockerfile'
   tag: '$(Build.BuildId)' # Use the unique build ID as the image tag
