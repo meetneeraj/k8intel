@@ -34,6 +34,7 @@ builder.Services.AddScoped<IMetricService, MetricService>();
 builder.Services.AddScoped<IDataRetentionJob, DataRetentionJob>();
 builder.Services.AddScoped<IKubernetesService, KubernetesService>();
 builder.Services.AddScoped<IInsightsGeneratorJob, InsightsGeneratorJob>();
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
    
 builder.Services.AddHttpsRedirection(options =>
         {

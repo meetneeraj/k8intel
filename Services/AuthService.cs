@@ -17,20 +17,21 @@ namespace K8Intel.Services
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IPasswordHasher _passwordHasher;
 
-        public AuthService(AppDbContext context, IConfiguration configuration)
+        public AuthService(AppDbContext context, IConfiguration configuration, IPasswordHasher passwordHasher)
         {
             _context = context;
             _configuration = configuration;
+            _passwordHasher = passwordHasher; 
         }
 
         public async Task<(User? user, string? token)> LoginAsync(UserLoginDto loginDto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
-        if (user == null || !VerifyPassword(loginDto.Password, user.PasswordHash))
+        if (user == null || !_passwordHasher.VerifyPassword(loginDto.Password, user.PasswordHash))
         {
-            // Instead of throwing, we return nulls so the controller can handle it
-            return (null, null);
+            throw new UnauthorizedAccessException("Invalid credentials.");
         }
 
         var token = GenerateJwtToken(user);
@@ -47,27 +48,13 @@ namespace K8Intel.Services
             var user = new User
             {
                 Username = registrationDto.Username,
-                PasswordHash = HashPassword(registrationDto.Password),
+                PasswordHash = _passwordHasher.HashPassword(registrationDto.Password),
                 Role = registrationDto.Role
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             return user;
-        }
-
-        private string HashPassword(string password)
-        {
-            using (var sha256 = SHA256.Create())
-            {
-                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return BitConverter.ToString(hashedBytes).Replace("-", "").ToLower();
-            }
-        }
-
-        private bool VerifyPassword(string password, string storedHash)
-        {
-            return HashPassword(password) == storedHash;
         }
 
         private string GenerateJwtToken(User user)
