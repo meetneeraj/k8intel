@@ -81,6 +81,6 @@ stages:
       displayName: 'Set image in Kubernetes'
       inputs:
         connectionType: 'Kubernetes Service Connection'
-        kubernetesServiceEndpoint: 'aks-dev-cluster'
+        kubernetesServiceEndpoint: 'docker-desktop-k8s'
         command: 'set'
         arguments: 'image deployment/k8intel-api-deployment k8intel-api-container=$(acrHostname)/$(imageRepository):$(tag)'
