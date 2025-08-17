@@ -12,6 +12,7 @@ variables:
   azureServiceConnection: 'Azure-Subscription' 
   # IMPORTANT: Change this to your Azure Container Registry name
   azureContainerRegistry: 'k8intelregistrynmac.azurecr.io'
+  dockerRegistryServiceConnection: 'k8intelregistrynmac' 
   imageRepository: 'k8intel-api' 
   dockerfilePath: 'K8intel/Dockerfile'
   tag: '$(Build.BuildId)' # Use the unique build ID as the image tag
@@ -62,7 +63,7 @@ stages:
         repository: '$(imageRepository)'
         dockerfile: '$(dockerfilePath)'
         # This references the ACR via your Azure service connection
-        containerRegistry: '$(azureServiceConnection)' 
+        containerRegistry: '$(dockerRegistryServiceConnection)'
         tags: |
           $(tag)
 
