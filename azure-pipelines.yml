@@ -11,8 +11,8 @@ variables:
   # IMPORTANT: Change this to the name of your Azure Resource Manager service connection
   azureServiceConnection: 'Azure-Subscription' 
   # IMPORTANT: Change this to your Azure Container Registry name
-  azureContainerRegistry: 'k8intelregistrynmac.azurecr.io'
-  dockerRegistryServiceConnection: 'k8intelregistrynmac.azurecr.io' 
+  azureContainerRegistry: 'k8intelregistrynmac'
+  dockerRegistryServiceConnection: 'k8intel-acr-connection' 
   imageRepository: 'k8intel-api' 
   dockerfilePath: 'K8intel/Dockerfile'
   tag: '$(Build.BuildId)' # Use the unique build ID as the image tag
@@ -51,21 +51,23 @@ stages:
 
 - stage: Build_and_Push_Image
   displayName: 'Build & Push Docker Image Stage'
-  dependsOn: Build_and_Test 
+  dependsOn: Build_and_Test
   jobs:
   - job: PushImage
     displayName: 'Build and Push to ACR'
     steps:
     - task: Docker@2
-      displayName: 'Login, Build and Push to ACR'
+      displayName: 'Build and push image to ACR'
       inputs:
         command: 'buildAndPush'
+        # This MUST be the NAME of your Azure Container Registry, e.g., 'k8intelregistrynmac'
         repository: '$(imageRepository)'
         dockerfile: '$(dockerfilePath)'
-        # This references the ACR via your Azure service connection
+        # This is the NAME of your service connection, e.g., 'k8intel-acr-connection'
         containerRegistry: '$(dockerRegistryServiceConnection)'
         tags: |
           $(tag)
+          latest
 
 - stage: Deploy_to_K8s
   displayName: 'Deploy to Kubernetes Stage'
@@ -74,15 +76,11 @@ stages:
   - job: Deploy
     displayName: 'Deploy to AKS'
     steps:
-    # This is the modern, recommended task for deploying manifests to Kubernetes
-    - task: KubernetesManifest@0
-      displayName: 'Deploy API to Kubernetes cluster'
+    # Use the simple task to set the image
+    - task: Kubernetes@1
+      displayName: 'Set image in Kubernetes'
       inputs:
-        action: 'deploy'
-        # This references the Kubernetes service connection
-        kubernetesServiceConnection: '$(kubernetesServiceEndpoint)'
-        # Path to your manifest file
-        manifests: '$(k8sManifestPath)'
-        # This section performs the image substitution
-        containers: |
-          $(azureContainerRegistry)/$(imageRepository):$(tag)
+        connectionType: 'Kubernetes Service Connection'
+        kubernetesServiceEndpoint: 'aks-dev-cluster'
+        command: 'set'
+        arguments: 'image deployment/k8intel-api-deployment k8intel-api-container=$(acrHostname)/$(imageRepository):$(tag)'
