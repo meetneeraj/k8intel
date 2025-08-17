@@ -6,15 +6,21 @@ trigger:
 variables:
   # General
   buildConfiguration: 'Release'
-  solution: '**/*.sln'
-  project: 'K8intel/K8intel.csproj'
   
   # Docker / ACR
+  # IMPORTANT: Change this to the name of your Azure Resource Manager service connection
+  azureServiceConnection: 'Azure-Subscription' 
   # IMPORTANT: Change this to your Azure Container Registry name
-  dockerRegistryServiceConnection: 'k8s-acr-connection'
+  azureContainerRegistry: 'k8intelregistrynmac.azurecr.io'
   imageRepository: 'k8intel-api' 
   dockerfilePath: 'K8intel/Dockerfile'
   tag: '$(Build.BuildId)' # Use the unique build ID as the image tag
+  
+  # Kubernetes
+  # IMPORTANT: Change this to the name of your Kubernetes service connection
+  kubernetesServiceEndpoint: 'aks-dev-cluster' 
+  k8sManifestPath: '$(Build.SourcesDirectory)/deploy/k8s-deployment.yml'
+
 
 # Use a standard Microsoft-hosted agent for the jobs
 pool:
@@ -28,55 +34,35 @@ stages:
     displayName: 'Build and Test .NET Project'
     steps:
     - task: DotNetCoreCLI@2
-      displayName: 'Restore Dependencies'
-      inputs:
-        command: 'restore'
-        projects: '$(solution)'
-
-    - task: DotNetCoreCLI@2
-      displayName: 'Build Solution'
+      displayName: 'Restore & Build'
       inputs:
         command: 'build'
-        projects: '$(solution)'
+        projects: 'K8intel/K8intel.csproj'
         arguments: '--configuration $(buildConfiguration)'
 
     - task: DotNetCoreCLI@2
       displayName: 'Run Tests'
       inputs:
         command: 'test'
-        projects: '**/*Tests/*.csproj'
-        arguments: '--configuration $(buildConfiguration)'
+        projects: 'K8Intel.Tests/K8Intel.Tests.csproj'
+        arguments: '--no-build --configuration $(buildConfiguration)'
         publishTestResults: true
-
-    - task: DotNetCoreCLI@2
-      displayName: 'Publish Artifact'
-      inputs:
-        command: 'publish'
-        publishWebProjects: true
-        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
-        zipAfterPublish: false
-        
-    - task: PublishBuildArtifacts@1
-      displayName: 'Upload Artifact'
-      inputs:
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-        ArtifactName: 'web'
 
 - stage: Build_and_Push_Image
   displayName: 'Build & Push Docker Image Stage'
-  dependsOn: Build_and_Test # This stage depends on the previous one
+  dependsOn: Build_and_Test 
   jobs:
   - job: PushImage
     displayName: 'Build and Push to ACR'
     steps:
     - task: Docker@2
-      displayName: 'Build and push image to ACR'
+      displayName: 'Login, Build and Push to ACR'
       inputs:
         command: 'buildAndPush'
         repository: '$(imageRepository)'
         dockerfile: '$(dockerfilePath)'
-        # This references the service connection you created
-        containerRegistry: '$(dockerRegistryServiceConnection)'
+        # This references the ACR via your Azure service connection
+        containerRegistry: '$(azureServiceConnection)' 
         tags: |
           $(tag)
 
@@ -87,15 +73,15 @@ stages:
   - job: Deploy
     displayName: 'Deploy to AKS'
     steps:
-    - task: Kubernetes@1
-      displayName: 'Deploy API to Kubernetes'
+    # This is the modern, recommended task for deploying manifests to Kubernetes
+    - task: KubernetesManifest@0
+      displayName: 'Deploy API to Kubernetes cluster'
       inputs:
+        action: 'deploy'
         # This references the Kubernetes service connection
-        connectionType: 'Kubernetes Service Connection'
-        kubernetesServiceEndpoint: 'aks-dev-cluster' 
-        command: 'apply'
-        useConfigurationFile: true
-        # We assume your k8s manifest is in a 'deploy' folder
-        configuration: 'deploy/k8s-deployment.yml'
-        # This allows us to dynamically set the image tag in our manifest
-        arguments: '--set image.tag=$(tag)'
+        kubernetesServiceConnection: '$(kubernetesServiceEndpoint)'
+        # Path to your manifest file
+        manifests: '$(k8sManifestPath)'
+        # This section performs the image substitution
+        containers: |
+          $(azureContainerRegistry)/$(imageRepository):$(tag)

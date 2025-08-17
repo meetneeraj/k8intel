@@ -3,22 +3,21 @@ kind: Service
 metadata:
   name: k8intel-api-service
 spec:
-  # This makes the service accessible from outside the cluster via a cloud load balancer
   type: LoadBalancer 
   selector:
     app: k8intel-api
   ports:
     - name: http
       protocol: TCP
-      port: 80 # The port the service will be available on
-      targetPort: 8080 # The port on the container that traffic is sent to
+      port: 80 
+      targetPort: 8080 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: k8intel-api-deployment
 spec:
-  replicas: 2 # Run two instances for high availability
+  replicas: 2
   selector:
     matchLabels:
       app: k8intel-api
@@ -29,18 +28,18 @@ spec:
     spec:
       containers:
       - name: k8intel-api-container
-        # This is a placeholder that will be replaced by the Azure Pipeline during deployment
-        image: #{ACR_NAME}#.azurecr.io/#{IMAGE_REPO}#:#{BUILD_ID}#
+        # IMPORTANT: Replace 'your-acr-name' with the real name of your Azure Container Registry
+        # The ':latest' tag is just a placeholder; the pipeline will replace the whole image definition.
+        image: kk8intelregistrynmac.azurecr.io/k8intel-api:latest 
         ports:
         - containerPort: 8080
         env:
-        # It's a best practice to manage secrets via a Kubernetes Secret, 
-        # but for simplicity, we can define them here.
-        # The pipeline would need to replace these values.
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
         - name: ConnectionStrings__DefaultConnection
           valueFrom:
             secretKeyRef:
-              name: k8intel-secrets # Assumes a K8s secret named 'k8intel-secrets'
+              name: k8intel-secrets 
               key: db-connection-string
         - name: Jwt__Key
           valueFrom:
@@ -57,3 +56,18 @@ spec:
             secretKeyRef:
               name: k8intel-secrets
               key: jwt-audience
+---
+# --- Example Kubernetes Secret ---
+# You would save this as 'k8s-secrets.yml', fill in the base64-encoded values,
+# and apply it ONCE to your cluster manually: kubectl apply -f k8s-secrets.yml
+#
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: k8intel-secrets
+# type: Opaque
+# data:
+#   db-connection-string: "UG9zdGdyZVN1cGVyU2VjcmV0Q29ubmVjdGlvblN0cmluZw==" # echo -n 'PostgreSuperSecretConnectionString' | base64
+#   jwt-key: "VGhpcyBJcyBNeSBWZXJ5IFNlY3VyZSBKV1QgS2V5IGZvciBIMjU2"
+#   jwt-issuer: "SzhJbnRlbEFQSQ=="
+#   jwt-audience: "SzhJbnRlbENsaWVudA=="
